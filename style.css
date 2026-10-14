@@ -9,3 +9,4 @@
 
 .account-card{max-width:650px;margin:30px auto}.account-card label{display:block;margin:18px 0 8px}.account-card h1{font-size:30px}#sync-status{color:#315e4b}
 
+.pronunciation{display:inline-block;margin:6px 0 6px 8px;padding:6px 10px;border-radius:10px;background:#edf3ec;color:#356444;font-size:14px;text-decoration:none}.pronunciation:hover{background:#dce8da}.pronunciation:focus-visible{outline:2px solid #356444;outline-offset:3px}
