@@ -7,3 +7,5 @@
 
 .capy-art{display:inline-block;width:120px;aspect-ratio:4/5;background-image:url("assets/capybara-atlas.png");background-size:500% 400%;background-repeat:no-repeat;flex-shrink:0}.capy-badge .capy-art{width:120px}.reward-summary .capy-art{width:100px}@media(max-width:650px){.reward-summary .capy-art{width:75px}}
 
+.account-card{max-width:650px;margin:30px auto}.account-card label{display:block;margin:18px 0 8px}.account-card h1{font-size:30px}#sync-status{color:#315e4b}
+
