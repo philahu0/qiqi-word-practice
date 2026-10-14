@@ -1,6 +1,6 @@
 (function(){
   const KEY='qiqi-vocab-v1', META=KEY+'-cloud-meta';
-  const empty=()=>({mistakes:{},seen:{},mastered:{},tested:{},directPass:{},attempts:0,correct:0,verificationSemantics:2});
+  const empty=()=>({mistakes:{},seen:{},mastered:{},tested:{},directPass:{},reviewHistory:{},attempts:0,correct:0,verificationSemantics:2});
   const clone=s=>JSON.parse(JSON.stringify(s));
   let client=null,user=null,meta={},base='',ready=false,busy=false,applying=false,timer=null,conflict=null,hydration=null,message='云端尚未接通，记录仍保存在此浏览器';
   try{meta=JSON.parse(localStorage.getItem(META)||'{}')}catch{}
@@ -20,4 +20,3 @@
   async function init(){document.querySelector('#account-nav').onclick=accountPage;let config=window.CLOUD_CONFIG;if(!config?.url||!config.publishableKey){status(message);return}try{let sdk=await import('https://esm.sh/@supabase/supabase-js@2.102.0');client=sdk.createClient(config.url,config.publishableKey);let {data,error}=await client.auth.getSession();if(error)throw error;if(data.session)await hydrate(data.session.user);else status('登录后可将记录保存到云端');client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN'&&session?.user.id!==user?.id)setTimeout(()=>hydrate(session.user),0);if(event==='SIGNED_OUT'){ready=false;user=null;status('已退出，云端记录仍保留')}});window.addEventListener('online',()=>{if(user&&!ready)hydrate(user);else flush()});window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh();else flush()})}catch{status('云端连接暂不可用；练习记录仍保留在此浏览器')}}
   window.CloudSync={note,flush,accountPage,init};init();
 })();
-
