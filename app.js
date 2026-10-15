@@ -1,4 +1,4 @@
-const words=window.VOCAB, app=document.querySelector('#app'), KEY='qiqi-vocab-v1';
+const words=window.VOCAB, app=document.querySelector('#app'), KEY=window.QIQI_DEMO?'qiqi-island-demo-v1':'qiqi-vocab-v1';
 let state={mistakes:{},seen:{},attempts:0,correct:0},mode='cn',view='lists',session=null,storageOK=true;
 try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&saved.mistakes&&saved.seen)state=saved}catch{storageOK=false}
 state.mastered=state.mastered||{};state.tested=state.tested||{};state.directPass=state.directPass||{};state.reviewHistory=state.reviewHistory||{};for(let [id,m] of Object.entries(state.mastered)){if(m.source==='first-correct'){let pass=state.directPass[id]||={cn:state.tested[id+':cn']===true,en:state.tested[id+':en']===true};if(!(pass.cn&&pass.en))delete state.mastered[id]}}
