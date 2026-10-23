@@ -28,3 +28,6 @@ header nav{flex-wrap:wrap}.reading-workspace{display:grid;grid-template-columns:
 .island-art{background-image:url(assets/capybara-worlds-v1.png)}
 
 .free-island-stage{cursor:crosshair}.free-island-piece{cursor:grab;touch-action:none;user-select:none}.free-island-piece.is-dragging{cursor:grabbing;opacity:.9}.free-island-piece.free-selected{outline:2px solid #f0c654;outline-offset:2px}.free-island-piece .reading-decor,.free-island-piece .capy-art,.free-island-piece small{pointer-events:none}
+
+/* Separate square rabbit cells keep ears and props clear of adjacent sprites. */
+.rabbit-art{background-image:none;display:inline-flex;align-items:flex-end}.rabbit-tile{display:block;width:100%;aspect-ratio:1;background-image:url(assets/rabbit-stickers-v1.png);background-size:300% 200%;background-repeat:no-repeat}.island-controls option.partner-on-island{color:#27694e;font-weight:700}.island-controls option.partner-in-collection{color:#526477}.rabbit-collection{margin:30px 0}.rabbit-collection .capy-badge{background:#fff1f2;border-color:#eed1d7}
