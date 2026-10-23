@@ -1,0 +1,1 @@
+window.WORD_SCENES={sew:{src:"assets/word-scenes/sew-v1.png",alt:"小兔兔用针线把纽扣缝在蓝色围巾上，表现缝纫的动作"}};
