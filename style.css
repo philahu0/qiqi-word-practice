@@ -41,3 +41,5 @@ header nav{flex-wrap:wrap}.reading-workspace{display:grid;grid-template-columns:
 .study-buds{gap:clamp(3px,1vw,12px);font-size:clamp(18px,4.8vw,25px);flex-wrap:wrap}.study-example .study-example-en{margin:12px 0 0}.study-example .study-example-zh{margin:8px 0 0;color:#728174;font-size:14px}
 
 .vocab-example .study-example-en{margin:10px 0 0}.vocab-example .study-example-zh{margin:6px 0 0;color:#718277}
+
+.mistake>div:first-child{flex:1;min-width:0}.mistake-picture{width:min(100%,640px);margin-top:12px}.mistake-picture img{display:block;width:100%;height:auto;border-radius:12px}

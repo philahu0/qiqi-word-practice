@@ -8,6 +8,6 @@ if(window.QIQI_DEMO){
   }
   for(const id of ['learn-nav','lists-nav','review-nav','reading-nav','mistakes-nav','reset-nav'])document.querySelector('#'+id).hidden=true;
   document.querySelector('#account-nav').textContent='返回正式学习';
-  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261023-fast-islands'};
+  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261023-mistake-pictures'};
   openIsland(6);
 }
