@@ -39,3 +39,5 @@ header nav{flex-wrap:wrap}.reading-workspace{display:grid;grid-template-columns:
 .study-illustration{margin:22px 0;border-radius:16px;overflow:hidden;background:#fff6e7}.study-illustration img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain}
 
 .study-buds{gap:clamp(3px,1vw,12px);font-size:clamp(18px,4.8vw,25px);flex-wrap:wrap}.study-example .study-example-en{margin:12px 0 0}.study-example .study-example-zh{margin:8px 0 0;color:#728174;font-size:14px}
+
+.vocab-example .study-example-en{margin:10px 0 0}.vocab-example .study-example-zh{margin:6px 0 0;color:#718277}
