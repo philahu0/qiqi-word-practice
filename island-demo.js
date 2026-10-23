@@ -6,8 +6,8 @@ if(window.QIQI_DEMO){
     for(const r of window.READINGS||[])state.reading[r.id]={answers:r.questions.map(q=>q.answer),submitted:true,attempts:1,best:5,score:5,updatedAt:Date.now()-21*60000,lastSubmittedAt:Date.now()-21*60000};
     state.demoSeeded=true;state.demoRabbitSeeded=true;save();
   }
-  for(const id of ['lists-nav','review-nav','reading-nav','mistakes-nav','reset-nav'])document.querySelector('#'+id).hidden=true;
+  for(const id of ['learn-nav','lists-nav','review-nav','reading-nav','mistakes-nav','reset-nav'])document.querySelector('#'+id).hidden=true;
   document.querySelector('#account-nav').textContent='返回正式学习';
-  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261023-rabbit-islands'};
+  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261023-learning-rabbit100'};
   openIsland(6);
 }
