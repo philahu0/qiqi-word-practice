@@ -8,6 +8,6 @@ if(window.QIQI_DEMO){
   }
   for(const id of ['learn-nav','lists-nav','review-nav','reading-nav','mistakes-nav','reset-nav'])document.querySelector('#'+id).hidden=true;
   document.querySelector('#account-nav').textContent='返回正式学习';
-  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261028-gw-u2'};
+  document.querySelector('#account-nav').onclick=()=>{location.href='./?v=20261028-gw-cn'};
   openIsland(6);
 }
