@@ -43,3 +43,5 @@ header nav{flex-wrap:wrap}.reading-workspace{display:grid;grid-template-columns:
 .vocab-example .study-example-en{margin:10px 0 0}.vocab-example .study-example-zh{margin:6px 0 0;color:#718277}
 
 .mistake>div:first-child{flex:1;min-width:0}.mistake-picture{width:min(100%,640px);margin-top:12px}.mistake-picture img{display:block;width:100%;height:auto;border-radius:12px}
+
+.usage-context{font-size:clamp(20px,3vw,27px);line-height:1.7;white-space:pre-line}.usage-options{display:grid;gap:12px;margin:24px 0}.usage-options button{text-align:left;min-height:54px;font-size:19px;white-space:normal;overflow-wrap:anywhere}.usage-options button[aria-pressed=true]{border:2px solid var(--accent,#8a683e)}.usage-options button:disabled{opacity:1}.usage-options strong{margin-right:12px}
