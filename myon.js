@@ -3,7 +3,10 @@
   const bookGoals=[[1,'📗','第一本书'],[3,'🔖','小书虫'],[5,'📚','五本达成'],[10,'🏅','十本书'],[20,'🏆','阅读达人'],[30,'👑','书架小主人'],[50,'🌟','五十本传奇']];
   const minuteGoals=[[60,'⏱️','读满1小时'],[180,'🕒','读满3小时'],[300,'⌛','读满5小时'],[600,'🔥','读满10小时'],[1200,'🚀','读满20小时']];
   const streakGoals=[[3,'🌱','连读3天'],[7,'🌳','连读一周'],[14,'🌈','连读两周'],[30,'🎆','连读一个月']];
-  const log=()=>(window.MYON_LOG||[]).filter(x=>x&&x.title&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const valid=x=>x&&x.title&&/^\d{4}-\d{2}-\d{2}$/.test(x.date);
+  function store(){let state=window.LearningApp.read();state.myon||={entries:[]};state.myon.entries||=[];return state.myon}
+  const all=()=>[...(window.MYON_LOG||[]).filter(valid).map((x,i)=>({...x,id:'static-'+i,confirmed:true,fixed:true})),...store().entries.filter(valid)].sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  const log=()=>all().filter(x=>x.confirmed);
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
   function stats(entries){
@@ -18,17 +21,34 @@
   function setNav(){document.querySelectorAll('header nav button').forEach(b=>b.classList.toggle('active',b.id==='myon-nav'))}
   function page(){
     window.LearningApp.leave();setNav();
-    let entries=log(),s=stats(entries);
-    app.innerHTML=`<div class="eyebrow">MYON · 课外阅读</div><h1>myON 阅读</h1><p>在 myON 上挑自己喜欢的书来读。读完把 myON 的阅读记录截图发给爸爸妈妈，记录更新后，这里的书架和徽章就会亮起来。</p>
+    let entries=log(),pending=all().filter(x=>!x.confirmed),s=stats(entries),t=today();
+    app.innerHTML=`<div class="eyebrow">MYON · 课外阅读</div><h1>myON 阅读</h1><p>在 myON 上挑自己喜欢的书来读。读完回到这里打卡，爸爸妈妈确认后，书架和徽章就会亮起来。</p>
     <div class="myon-go"><a class="button primary" href="${URL}" target="_blank" rel="noopener">去 myON 读书 ↗</a><span class="hint">会在新窗口打开，用学校给的账号登录</span></div>
+    <form class="card myon-section myon-form" id="myon-form"><h2>读完打卡</h2>
+      <label>书名<input name="title" required maxlength="80" placeholder="例如 Magic Tree House" autocomplete="off"></label>
+      <div class="myon-row"><label>阅读日期<input name="date" type="date" value="${t}" max="${t}" required></label><label>读了多少分钟<select name="minutes">${[5,10,15,20,25,30,40,45,60,90].map(m=>`<option ${m===20?'selected':''}>${m}</option>`).join('')}</select></label></div>
+      <label>用一句话说说这本书（英文中文都可以）<input name="note" required minlength="4" maxlength="200" placeholder="这本书讲了… / 我最喜欢…"></label>
+      <button class="primary">提交打卡</button><p id="myon-message" class="hint" role="status"></p></form>
+    ${pending.length?`<section class="card myon-section myon-pending"><h2>等待爸爸妈妈确认 · ${pending.length}</h2>${pending.map(x=>`<div class="myon-pending-item"><div><strong>${esc(x.title)}</strong><small>${esc(x.date)} · ${x.minutes} 分钟</small><p>${esc(x.note||'')}</p></div><div class="myon-actions"><button class="primary" data-myon-confirm="${esc(x.id)}">家长确认 ✓</button><button class="outline" data-myon-delete="${esc(x.id)}">删除</button></div></div>`).join('')}</section>`:''}
     <div class="stats"><div><strong>${s.books}</strong><span>本书</span></div><div><strong>${s.minutes}</strong><span>分钟</span></div><div><strong>${s.week}</strong><span>近7天分钟</span></div><div><strong>${s.current}</strong><span>天连续阅读（最长 ${s.best} 天）</span></div></div>
     <section class="card myon-section"><h2>读书徽章</h2>${badges(bookGoals,s.books,'本')}</section>
     <section class="card myon-section"><h2>时长徽章</h2>${badges(minuteGoals,s.minutes,'分钟')}</section>
     <section class="card myon-section"><h2>连读徽章</h2>${badges(streakGoals,s.best,'天')}</section>
-    <h2>我的书架</h2>${entries.length?`<div class="myon-shelf">${entries.map(x=>`<article class="myon-book"><strong>${esc(x.title)}</strong><small>${esc(x.date)} · ${Number(x.minutes)||0} 分钟${x.lexile?' · '+esc(String(x.lexile)):''}</small>${x.note?`<p>${esc(x.note)}</p>`:''}</article>`).join('')}</div>`:'<div class="empty"><p>书架还空着。去 myON 读第一本书吧！</p></div>'}`;
+    <h2>我的书架</h2>${entries.length?`<div class="myon-shelf">${entries.map(x=>`<article class="myon-book"><strong>${esc(x.title)}</strong><small>${esc(x.date)} · ${Number(x.minutes)||0} 分钟${x.lexile?' · '+esc(String(x.lexile)):''}</small>${x.fixed?'':`<button class="myon-undo" data-myon-unconfirm="${esc(x.id)}">撤销确认</button>`}${x.note?`<p>${esc(x.note)}</p>`:''}</article>`).join('')}</div>`:'<div class="empty"><p>书架还空着。去 myON 读第一本书吧！</p></div>'}`;
+    app.querySelector('#myon-form').onsubmit=submit;
+    app.querySelectorAll('[data-myon-confirm],[data-myon-delete],[data-myon-unconfirm]').forEach(b=>b.onclick=act);
   }
+  function submit(e){e.preventDefault();let f=new FormData(e.target),title=String(f.get('title')).trim(),note=String(f.get('note')).trim(),date=String(f.get('date')),minutes=Number(f.get('minutes'));
+    if(!title||note.length<4||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today()||!(minutes>0)){document.querySelector('#myon-message').textContent='请填好书名、日期，再写一句话说说这本书。';return}
+    store().entries.push({id:'m'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,title,minutes,note,confirmed:false,createdAt:Date.now()});window.LearningApp.commit();page();document.querySelector('#myon-message').textContent='打卡成功！请爸爸妈妈确认 ✓'}
+  function act(e){let d=e.currentTarget.dataset,m=store(),id=d.myonConfirm||d.myonDelete||d.myonUnconfirm,x=m.entries.find(y=>y.id===id);if(!x)return;
+    if(d.myonDelete){if(!confirm('删除这条打卡「'+x.title+'」？'))return;m.entries=m.entries.filter(y=>y!==x)}
+    else if(d.myonConfirm){x.confirmed=true;x.confirmedAt=Date.now()}
+    else{if(!confirm('撤销「'+x.title+'」的确认？'))return;x.confirmed=false}
+    window.LearningApp.commit();page()}
   let btn=document.createElement('button');btn.id='myon-nav';btn.textContent='myON 阅读';
   document.querySelector('#reading-nav').after(btn);btn.onclick=page;
   document.querySelector('header nav').addEventListener('click',e=>{let b=e.target.closest('button');if(b&&b!==btn)btn.classList.remove('active')},true);
-  window.MyonReading={page,stats,log};
+  function merge(incoming){let m=store(),have=new Set(m.entries.map(x=>x.id));for(let x of incoming?.entries||[]){if(!valid(x)||typeof x.id!=='string'||have.has(x.id)||!(Number(x.minutes)>0))continue;m.entries.push({id:x.id,date:x.date,title:String(x.title).slice(0,80),minutes:Number(x.minutes),note:String(x.note||'').slice(0,200),confirmed:!!x.confirmed,createdAt:Number(x.createdAt)||Date.now(),confirmedAt:Number(x.confirmedAt)||undefined});have.add(x.id)}}
+  window.MyonReading={page,stats,log,all,merge};
 })();
