@@ -1,9 +1,9 @@
 (function(){
   // ReadTheory 每日阅读：去 ReadTheory 完成测验 → 回来输入最新的 Knowledge Points，比上次多才算今天完成。
   // 每周（周一到周日）有 2 个能量电池，可以补上最近 7 天里漏掉的一天，连续天数不断。
-  // 奖励是 100 只小企鹅贴纸：每完成一天领 1 只；连续天数里程碑各再送 2 只。企鹅可以摆到小岛上。
+  // 奖励是 99 只小企鹅贴纸：每完成一天领 1 只；连续天数里程碑各再送 2 只。企鹅可以摆到小岛上。
   const RT_URL='https://readtheory.org/auth/login',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
-  const PENGUINS=100,BONUS=2;
+  const PENGUINS=99,BONUS=2;
   const streakGoals=[[3,'连续3天'],[7,'连续一周'],[14,'连续两周'],[30,'连续一个月'],[60,'连续两个月']];
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
