@@ -29,9 +29,12 @@
   function bonusKeys(){let m=store();if(!Array.isArray(m.bonus)){m.bonus=streakGoals.filter(g=>stats().best>=g[0]).map(g=>'streak-'+g[0])}return m.bonus}
   function grantBonus(){let keys=bonusKeys(),best=stats().best;for(let g of streakGoals)if(best>=g[0]&&!keys.includes('streak-'+g[0]))keys.push('streak-'+g[0])}
   function penguinCount(){return Math.min(PENGUINS,kpDays()+BONUS*bonusKeys().length)}
-  const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
+  // 99 只企鹅的名字，按贴纸图上的顺序
+  const NAMES=["刷刷","暖暖","困困","跳跳","呼噜","毛毛","莓莓","团扇","小画家","灯灯","鱼鱼","小渔","魔术师","闪闪","饼饼","欢欢","嗨嗨","咕嘟","博士","报报","航航","偷笑","叶叶","心心","甜甜","乖乖","嘻嘻","瓜瓜","侦探","大厨","光光","剑剑","远远","团团","酥酥","红红","蓝蓝","指挥家","摇摇","纺纺","琴琴","酷酷","未来","咔咔","嚓嚓","拍拍","围围","招招","布丁","糕糕","沙沙","堡堡","泡泡","咕咕","洋洋","熊熊","笑笑","彩彩","壶壶","茶茶","小法师","公主","涂涂","笔笔","算算","珠珠","数数","呆呆","盘盘","点点","钓钓","灰灰","球球","松松","糖糖","汤汤","码码","包包","安安","滑滑","板板","歌歌","唱唱","提提","弦弦","花火","杯杯","胖胖","豆豆","抱抱","果果","圆圆","拜拜","礼礼","冠军","花花","眨眨","飞飞","雪雪"];
+  const pname=i=>NAMES[i]||'小企鹅';
+  const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||pname(i))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
   function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="rt-badge-icon">${value>=n?penguin(1,'小企鹅'):'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，下一次输入新分数时多送 ${BONUS} 只小企鹅。</p>`}
-  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2><span class="rt-inline-penguin">${penguin(1,'')}</span>小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每天输入更高的 Knowledge Points 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
+  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2><span class="rt-inline-penguin">${penguin(1,'')}</span>小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每天输入更高的 Knowledge Points 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>${esc(pname(i))}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
   // 蓝思值登山：山脚 0L（BR），山顶 1200L；输入蓝思值后企鹅爬到对应位置
   const LM=()=>window.LexileMountain,LEX_MAX=1200,LEX_STEP=200;
   const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
@@ -50,7 +53,7 @@
     window.LearningApp.commit();page();let flagsBefore=old==null?0:Math.floor(Math.min(old,LEX_MAX)/LEX_STEP),flagsNow=Math.floor(Math.min(n,LEX_MAX)/LEX_STEP),el=document.querySelector('#rt-lex-message');
     el.textContent=old==null?'小企鹅出发啦！目前在 '+n+'L。':n>old?'小企鹅往上爬了 '+(n-old)+'L！'+(flagsNow>flagsBefore?(flagsNow*LEX_STEP>=LEX_MAX?' 🏔️ 登上山顶啦！':' 🚩 到达 '+flagsNow*LEX_STEP+'L 小旗！'):''):'已更新为 '+n+'L。';
     document.querySelector('.rt-mountain')?.scrollIntoView({block:'nearest'})}
-  function stickers(){return Array.from({length:penguinCount()},(_,i)=>({id:'rt-penguin-'+(i+1),kind:'readtheory',name:'小企鹅 No.'+(i+1),index:i}))}
+  function stickers(){return Array.from({length:penguinCount()},(_,i)=>({id:'rt-penguin-'+(i+1),kind:'readtheory',name:pname(i),index:i}))}
   if(window.ReadingRewards){let RR=window.ReadingRewards,baseInventory=RR.inventory,baseSprite=RR.sprite,baseDisplay=RR.display;
     RR.inventory=()=>[...baseInventory(),...stickers()];
     RR.sprite=item=>item?.kind==='readtheory'?penguin(item.index,item.name):baseSprite(item);
@@ -72,7 +75,7 @@
     let box=document.createElement('div');box.className='rt-celebrate';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label','获得新企鹅');
     box.innerHTML=`<div class="rt-celebrate-card"><div class="rt-confetti" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="left:${(i*37)%100}%;animation-delay:${(i%6)*.12}s;background:${['#ffd23f','#ff7ab0','#4fd1c5','#7ad36f','#ff9f43','#8fb8ff'][i%6]}"></i>`).join('')}</div>
       <h2>🎉 获得 ${got} 只新企鹅！</h2>
-      <div class="rt-celebrate-penguins">${Array.from({length:got},(_,i)=>`<div style="animation-delay:${.15+i*.18}s">${penguin(from+i)}<small>No.${from+i+1}</small></div>`).join('')}</div>
+      <div class="rt-celebrate-penguins">${Array.from({length:got},(_,i)=>`<div style="animation-delay:${.15+i*.18}s">${penguin(from+i)}<small>${esc(pname(from+i))}</small></div>`).join('')}</div>
       <p>${names.length?'今天读完 1 只，加上「'+names.join('、')+'」连续奖励 '+names.length*BONUS+' 只。':'今天的 Knowledge Points 涨了，真棒！'}</p>
       <div class="rt-celebrate-actions"><button class="primary" data-celebrate="island">去小岛摆上</button><button data-celebrate="ok">好的</button></div></div>`;
     let close=()=>{box.remove();document.removeEventListener('keydown',esc_)},esc_=e=>{if(e.key==='Escape')close()};
