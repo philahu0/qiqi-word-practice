@@ -1,14 +1,11 @@
 (function(){
   // ReadTheory 每日阅读：去 ReadTheory 完成 1 篇阅读测验 → 回来点一下完成。
   // 每周（周一到周日）有 2 个能量电池，可以补上最近 7 天里漏掉的一天，连续天数不断。
-  // 主要里程碑是 ReadTheory 里累计完成的测验数；里程碑和连续天数都会解锁小岛贴纸。
+  // 奖励是 100 只小企鹅贴纸：每完成一天领 1 只；累计测验里程碑、连续天数里程碑各再送 2 只。企鹅可以摆到小岛上。
   const RT_URL='https://readtheory.org/auth/login',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
-  // [目标, 贴纸, 里程碑名, 贴纸名]
-  const streakGoals=[[3,'🍄','连续3天','蘑菇小屋'],[7,'🌈','连续一周','彩虹'],[14,'🎈','连续两周','热气球'],[30,'⛵','连续一个月','小帆船'],[60,'🌠','连续两个月','流星']];
-  const quizGoals=[[10,'🌻','10篇','向日葵'],[25,'🌴','25篇','椰子树'],[50,'⛺','50篇','露营帐篷'],[100,'🎠','100篇','旋转木马'],[200,'🏰','200篇','小城堡'],[365,'🎡','365篇','摩天轮'],[500,'🚀','500篇','火箭']];
-  // 贴纸名 → 矢量画（sticker-art.js）；没有画的仍显示 emoji
-  const ARTKEY={'向日葵':'sunflower','椰子树':'palm','露营帐篷':'tent','旋转木马':'carousel','小城堡':'castle','摩天轮':'ferris','火箭':'rocket','蘑菇小屋':'mushroom','彩虹':'rainbow','热气球':'balloon','小帆船':'sailboat','流星':'shootingstar'};
-  const art=(name,emoji)=>window.StickerArt?.has(ARTKEY[name])?window.StickerArt.svg(ARTKEY[name],esc(name)):emoji;
+  const PENGUINS=100,BONUS=2;
+  const streakGoals=[[3,'连续3天'],[7,'连续一周'],[14,'连续两周'],[30,'连续一个月'],[60,'连续两个月']];
+  const quizGoals=[[10,'10篇'],[25,'25篇'],[50,'50篇'],[100,'100篇'],[200,'200篇'],[365,'365篇'],[500,'500篇']];
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
   const valid=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -26,26 +23,30 @@
     let now=dayNum(today()),current=0;if(list.length&&now-list[list.length-1]<=1){current=1;for(let i=list.length-1;i>0&&list[i]-list[i-1]===1;i--)current++}
     return {total:list.length,best,current,todayDone:done(days[today()])};
   }
-  function stickerRow(goals,value){return `<div class="rt-badges">${goals.map(([n,icon,goal,name])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="${value>=n?'rt-art':''}">${value>=n?art(name,icon):'🔒'}</span><small>${value>=n?name:goal}</small></div>`).join('')}</div><p class="hint">解锁的贴纸可以在小岛上摆放装饰。</p>`}
+  const reached=(goals,v)=>goals.filter(g=>v>=g[0]).length;
+  function penguinCount(){let s=stats();return Math.min(PENGUINS,s.total+BONUS*(reached(quizGoals,latest())+reached(streakGoals,s.best)))}
+  const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
+  function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?'🐧':'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
+  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2>🐧 小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
   function quizSection(){
     let list=quizzes(),total=latest(),next=quizGoals.find(g=>total<g[0]),prevGoal=[...quizGoals].reverse().find(g=>total>=g[0]),now=dayNum(today()),base=[...list].reverse().find(x=>dayNum(x.date)<=now-7),gain=base?total-base.total:null;
     return `<section class="card rt-section"><h2>ReadTheory 累计测验 · 阅读里程碑</h2>
       <div class="rt-quiz-total"><strong>${total}</strong><span>篇</span>${gain!==null&&gain>0?`<em>近7天 +${gain}</em>`:''}</div>
-      ${next?`<div class="progress rt-quiz-bar"><i style="width:${Math.min(100,(total-(prevGoal?.[0]||0))/(next[0]-(prevGoal?.[0]||0))*100)}%"></i></div><p class="hint">下一个里程碑「${next[2]}」解锁贴纸 ${next[1]} ${next[3]}，还差 ${next[0]-total} 篇</p>`:'<p class="hint">全部里程碑达成，太厉害了！</p>'}
-      ${stickerRow(quizGoals,total)}
+      ${next?`<div class="progress rt-quiz-bar"><i style="width:${Math.min(100,(total-(prevGoal?.[0]||0))/(next[0]-(prevGoal?.[0]||0))*100)}%"></i></div><p class="hint">下一个里程碑「${next[1]}」再送 ${BONUS} 只企鹅，还差 ${next[0]-total} 篇</p>`:'<p class="hint">全部里程碑达成，太厉害了！</p>'}
+      ${goalRow(quizGoals,total)}
       <form id="rt-quiz-form" class="rt-quiz-form"><label>更新累计完成的测验数<input name="total" inputmode="numeric" pattern="[0-9,]*" placeholder="在 ReadTheory 里看到的测验总数" autocomplete="off"></label><button class="primary">更新</button></form>
       <p id="rt-quiz-message" class="hint" role="status">${list.length?'上次更新：'+esc(list.at(-1).date):'在 ReadTheory 的个人进度里找到已完成的测验总数（Quizzes），填进来就行。'}</p>
     </section>`}
-  function saveQuizzes(e){e.preventDefault();let raw=String(new FormData(e.target).get('total')||'').replace(/[,，\s]/g,''),n=Number(raw),msg=document.querySelector('#rt-quiz-message'),old=latest(),before=quizGoals.filter(g=>old>=g[0]).length;
+  function saveQuizzes(e){e.preventDefault();let raw=String(new FormData(e.target).get('total')||'').replace(/[,，\s]/g,''),n=Number(raw),msg=document.querySelector('#rt-quiz-message'),old=latest(),before=penguinCount();
     if(!/^\d+$/.test(raw)||n<=0||n>100000){msg.textContent='请输入 ReadTheory 里看到的测验总数（只填数字）。';return}
     if(n<old&&!confirm('新数字比上次（'+old+'）小，确定要更新吗？'))return;
     let m=store(),d=today(),same=m.quizzes.find(x=>x.date===d);if(same){same.total=n;same.at=Date.now()}else m.quizzes.push({date:d,total:n,at:Date.now()});
-    window.LearningApp.commit();page();let gained=quizGoals.filter(g=>n>=g[0]).slice(before);
-    document.querySelector('#rt-quiz-message').textContent=gained.length?'🎉 达成'+gained.map(g=>g[2]).join('、')+'！获得小岛贴纸：'+gained.map(g=>g[1]+' '+g[3]).join('、')+'，快去小岛摆上吧':'已更新为 '+n+' 篇'+(old&&n>old?'，比上次多 '+(n-old)+' 篇':'')}
-  function stickers(){let total=latest(),best=stats().best;return [...quizGoals.filter(g=>total>=g[0]).map(g=>({id:'rt-quiz-'+g[0],kind:'readtheory',name:g[3],emoji:g[1]})),...streakGoals.filter(g=>best>=g[0]).map(g=>({id:'rt-streak-'+g[0],kind:'readtheory',name:g[3],emoji:g[1]}))]}
+    window.LearningApp.commit();page();let gained=penguinCount()-before;
+    document.querySelector('#rt-quiz-message').textContent=gained>0?'🎉 达成新里程碑！获得 '+gained+' 只小企鹅，快去小岛摆上吧':'已更新为 '+n+' 篇'+(old&&n>old?'，比上次多 '+(n-old)+' 篇':'')}
+  function stickers(){return Array.from({length:penguinCount()},(_,i)=>({id:'rt-penguin-'+(i+1),kind:'readtheory',name:'小企鹅 No.'+(i+1),index:i}))}
   if(window.ReadingRewards){let RR=window.ReadingRewards,baseInventory=RR.inventory,baseSprite=RR.sprite,baseDisplay=RR.display;
     RR.inventory=()=>[...baseInventory(),...stickers()];
-    RR.sprite=item=>item?.kind==='readtheory'?(window.StickerArt?.has(ARTKEY[item.name])?`<span class="rt-sticker rt-sticker-art">${art(item.name,'')}</span>`:`<span class="rt-sticker" role="img" aria-label="${esc(item.name)}"><span>${item.emoji}</span></span>`):baseSprite(item);
+    RR.sprite=item=>item?.kind==='readtheory'?penguin(item.index,item.name):baseSprite(item);
     RR.display=item=>item?.kind==='readtheory'?RR.sprite(item):baseDisplay(item)}
   function week(){let days=store().days,now=dayNum(today());return `<div class="rt-week">${[6,5,4,3,2,1,0].map(n=>{let d=new Date((now-n)*864e5).toISOString().slice(0,10),x=days[d],c=count(x),w='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()],label=n?'周'+w:'今天';
       if(c>=DAILY)return `<div class="rt-day full"><small>${label}</small><span>⭐</span></div>`;
@@ -63,15 +64,16 @@
       <h2>${s.todayDone?'🎉 今天的阅读任务完成啦！':'📖 今天的阅读任务：完成 '+DAILY+' 篇 ReadTheory 测验'}</h2>
       <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，用自己的账号登录；读完文章做完题，回来点一下</span></div>
       <ol class="rt-steps">${Array.from({length:DAILY},(_,i)=>`<li class="${c>i?'checked':''}"><div><strong>${DAILY>1?'第 '+(i+1)+' 篇':'今天的 1 篇'}</strong></div><button class="rt-check" data-rt-quiz="${i+1}" aria-pressed="${c>i}">${c>i?'✓ 做完了':'做完了，点这里'}</button></li>`).join('')}</ol>
-      ${s.todayDone?'':'<p class="hint">做完就能点亮今天的星星 ⭐</p>'}
+      ${s.todayDone?'':'<p class="hint">做完就能点亮今天的星星 ⭐，再领 1 只新企鹅 🐧</p>'}
     </section>
+    ${collection()}
     ${quizSection()}
     <div class="stats"><div><strong>${s.current}</strong><span>天连续完成</span></div><div><strong>${s.best}</strong><span>天最长连续</span></div><div><strong>${s.total}</strong><span>天累计完成</span></div></div>
     <section class="card rt-section"><h2>最近 7 天 · 能量电池</h2>${week()}</section>
-    <section class="card rt-section"><h2>连续完成 · 小岛贴纸</h2>${stickerRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天，解锁贴纸 ${n[1]} ${n[3]}</p>`:'<p class="hint">连续贴纸全部收集！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>`;
+    <section class="card rt-section"><h2>连续完成 · 里程碑</h2>${goalRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天达成「${n[1]}」，再送 ${BONUS} 只企鹅</p>`:'<p class="hint">连续里程碑全部达成！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>`;
     app.querySelector('#rt-quiz-form').onsubmit=saveQuizzes;
     app.querySelectorAll('[data-rt-battery]').forEach(b=>b.onclick=()=>{let d=b.dataset.rtBattery;if(!valid(d)||d>=today())return;let m=store(),x=m.days[d]||={};if(x.battery)delete x.battery;else{if(count(x)>=DAILY||!batteriesLeft(d))return;x.battery=true}x.updatedAt=Date.now();window.LearningApp.commit();page()});
-    app.querySelectorAll('[data-rt-quiz]').forEach(b=>b.onclick=()=>{let m=store(),x=m.days[today()]||={},had=stickers().length,i=Number(b.dataset.rtQuiz);x.done=count(x)>=i?i-1:i;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=stickers().slice(had).filter(g=>g.id.startsWith('rt-streak'));if(got.length){let h=app.querySelector('.rt-today h2');h.textContent+=' 获得小岛贴纸：'+got.map(g=>g.emoji+' '+g.name).join('、')}});
+    app.querySelectorAll('[data-rt-quiz]').forEach(b=>b.onclick=()=>{let m=store(),x=m.days[today()]||={},had=penguinCount(),i=Number(b.dataset.rtQuiz);x.done=count(x)>=i?i-1:i;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=penguinCount()-had;if(got>0){let h=app.querySelector('.rt-today h2');h.textContent+=' 获得 '+got+' 只新企鹅 🐧'}});
     refreshDot();
   }
   function merge(incoming){let m=store();
