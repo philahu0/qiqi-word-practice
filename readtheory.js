@@ -26,8 +26,8 @@
   const reached=(goals,v)=>goals.filter(g=>v>=g[0]).length;
   function penguinCount(){let s=stats();return Math.min(PENGUINS,s.total+BONUS*reached(streakGoals,s.best))}
   const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
-  function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?'🐧':'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
-  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2>🐧 小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
+  function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="rt-badge-icon">${value>=n?penguin(1,'小企鹅'):'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
+  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2><span class="rt-inline-penguin">${penguin(1,'')}</span>小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
   // 蓝思值登山：山脚 0L（BR），山顶 1200L；输入蓝思值后企鹅爬到对应位置
   const LM=()=>window.LexileMountain,LEX_MAX=1200,LEX_STEP=200;
   const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
@@ -54,9 +54,13 @@
   function week(){let days=store().days,now=dayNum(today());return `<div class="rt-week">${[6,5,4,3,2,1,0].map(n=>{let d=new Date((now-n)*864e5).toISOString().slice(0,10),x=days[d],c=count(x),w='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()],label=n?'周'+w:'今天';
       if(c>=DAILY)return `<div class="rt-day full"><small>${label}</small><span>⭐</span></div>`;
       if(x?.battery)return `<button class="rt-day battery" data-rt-battery="${d}" title="已用能量电池补打卡，点一下退回电池"><small>${label}</small><span>🔋</span></button>`;
-      if(n&&batteriesLeft(d))return `<button class="rt-day can-fill" data-rt-battery="${d}" title="用一个能量电池补打卡"><small>${label}</small><span>🔋补</span></button>`;
       return `<div class="rt-day"><small>${label}</small><span>·</span></div>`}).join('')}</div>
-    <p class="hint">🔋 本周能量电池还剩 ${batteriesLeft(today())} / ${BATTERIES} 个：漏掉的日子点「🔋补」就能补打卡，连续天数不会断；点 🔋 可以退回。</p>`}
+`}
+  // 漏打卡提醒：只从第一次打卡那天往后算，最近 7 天里没完成、且那一周还有电池的日子
+  function missedDays(){let days=store().days,first=Object.keys(days).filter(d=>valid(d)&&(done(days[d])||Number.isFinite(days[d]?.kp))).sort()[0];if(!first)return [];let now=dayNum(today()),out=[];
+    for(let n=1;n<=6;n++){let d=new Date((now-n)*864e5).toISOString().slice(0,10);if(d>first&&!done(days[d])&&batteriesLeft(d))out.push(d)}return out.reverse()}
+  function batteryReminder(){let list=missedDays();if(!list.length)return '';let wd=d=>'周'+'日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()]+'（'+(+d.slice(5,7))+'/'+(+d.slice(8,10))+'）';
+    return `<section class="card rt-section rt-battery-alert"><h2>🔋 有 ${list.length} 天忘记打卡了</h2><p>用能量电池补上，连续天数就不会断。每周有 ${BATTERIES} 个电池。</p><div class="rt-battery-list">${list.map(d=>`<button class="primary" data-rt-battery="${d}">用电池补上 ${wd(d)}</button>`).join('')}</div></section>`}
   function setNav(){document.querySelectorAll('header nav button').forEach(b=>b.classList.toggle('active',b.id==='rt-nav'))}
   function refreshDot(){let ok=stats().todayDone;btn.classList.toggle('rt-due',!ok);btn.title=ok?'今天的 ReadTheory 已完成':'今天还没完成 ReadTheory 阅读测验'}
   function page(){
@@ -67,14 +71,14 @@
       <h2>${s.todayDone?'🎉 今天的阅读任务完成啦！':'📖 今天的阅读任务：完成 ReadTheory 测验，让 Knowledge Points 涨起来'}</h2>
       <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，用自己的账号登录；做完测验后看一下 Knowledge Points，回来填上</span></div>
       <form id="rt-kp-form" class="rt-kp-form"><label>做完测验后，输入 ReadTheory 上现在的 Knowledge Points<input name="kp" inputmode="numeric" pattern="[0-9,]*" placeholder="例如 1250" autocomplete="off" value="${t.kp??''}"></label><button class="primary">${s.todayDone&&t.kp!=null?'更新':'提交'}</button></form>
-      <p id="rt-kp-message" class="hint" role="status">${(l=>l?'上次记录：'+l.kp.toLocaleString('en-US')+' 分（'+esc(l.date)+'）。今天输入的分数要比这个多，才算完成。'+(t.kp!=null?' 今天已记录 '+t.kp.toLocaleString('en-US')+' 分。':''):t.kp!=null?'今天记下了起点 '+t.kp.toLocaleString('en-US')+' 分，明天的分数要比它多。':'第一次记录：输入现在的分数作为起点，以后每天都要比上一次多。')(lastKpBefore(today()))}</p>
-      ${s.todayDone?'':'<p class="hint">分数比上次多，就能点亮今天的星星 ⭐，再领 1 只新企鹅 🐧</p>'}
+      <p id="rt-kp-message" class="hint" role="status">${(l=>l?'上次记录：'+l.kp.toLocaleString('en-US')+' 分（'+esc(l.date)+'）'+(t.kp!=null?' · 今天：'+t.kp.toLocaleString('en-US')+' 分':''):'')(lastKpBefore(today()))}</p>
     </section>
-    ${lexileSection()}
-    ${collection()}
+    ${batteryReminder()}
     <div class="stats"><div><strong>${s.current}</strong><span>天连续完成</span></div><div><strong>${s.best}</strong><span>天最长连续</span></div><div><strong>${s.total}</strong><span>天累计完成</span></div></div>
-    <section class="card rt-section"><h2>最近 7 天 · 能量电池</h2>${week()}</section>
-    <section class="card rt-section"><h2>连续完成 · 里程碑</h2>${goalRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天达成「${n[1]}」，再送 ${BONUS} 只企鹅</p>`:'<p class="hint">连续里程碑全部达成！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>`;
+    <section class="card rt-section"><h2>最近 7 天</h2>${week()}</section>
+    <section class="card rt-section"><h2>连续完成 · 里程碑</h2>${goalRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天达成「${n[1]}」，再送 ${BONUS} 只企鹅</p>`:'<p class="hint">连续里程碑全部达成！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>
+    ${lexileSection()}
+    ${collection()}`;
     app.querySelectorAll('[data-rt-battery]').forEach(b=>b.onclick=()=>{let d=b.dataset.rtBattery;if(!valid(d)||d>=today())return;let m=store(),x=m.days[d]||={};if(x.battery)delete x.battery;else{if(count(x)>=DAILY||!batteriesLeft(d))return;x.battery=true}x.updatedAt=Date.now();window.LearningApp.commit();page()});
     app.querySelector('#rt-lex-form').onsubmit=saveLexile;
     app.querySelector('#rt-kp-form').onsubmit=e=>{e.preventDefault();let raw=String(new FormData(e.target).get('kp')||'').replace(/[,，\s]/g,''),n=Number(raw),msg=document.querySelector('#rt-kp-message'),d=today(),prev=kpBefore(d);
@@ -82,7 +86,7 @@
       let m=store(),x=m.days[d]||={},first=!Object.entries(m.days).some(([k,y])=>k<d&&Number.isFinite(y?.kp));
       if(!first&&n<=prev){msg.textContent='这个数字没有比上次（'+prev.toLocaleString('en-US')+' 分）多。先去 ReadTheory 完成一篇测验，再回来输入新的分数吧。';return}
       let had=penguinCount();x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');
-      document.querySelector('#rt-kp-message').textContent=(first?'已记下起点 '+n.toLocaleString('en-US')+' 分。':'比上次多了 '+(n-prev).toLocaleString('en-US')+' 分，真棒！')+(got>0?' 获得 '+got+' 只新企鹅 🐧':'');if(got>0)h.textContent+=' 获得 '+got+' 只新企鹅 🐧'};
+      document.querySelector('#rt-kp-message').textContent=(first?'已记下起点 '+n.toLocaleString('en-US')+' 分。':'比上次多了 '+(n-prev).toLocaleString('en-US')+' 分，真棒！')+(got>0?' 获得 '+got+' 只新企鹅！':'');if(got>0)h.textContent+=' 获得 '+got+' 只新企鹅！'};
     refreshDot();
   }
   function merge(incoming){let m=store();
