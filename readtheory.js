@@ -6,6 +6,9 @@
   // [目标, 贴纸, 里程碑名, 贴纸名]
   const streakGoals=[[3,'🍄','连续3天','蘑菇小屋'],[7,'🌈','连续一周','彩虹'],[14,'🎈','连续两周','热气球'],[30,'⛵','连续一个月','小帆船'],[60,'🌠','连续两个月','流星']];
   const quizGoals=[[10,'🌻','10篇','向日葵'],[25,'🌴','25篇','椰子树'],[50,'⛺','50篇','露营帐篷'],[100,'🎠','100篇','旋转木马'],[200,'🏰','200篇','小城堡'],[365,'🎡','365篇','摩天轮'],[500,'🚀','500篇','火箭']];
+  // 贴纸名 → 矢量画（sticker-art.js）；没有画的仍显示 emoji
+  const ARTKEY={'向日葵':'sunflower','椰子树':'palm','露营帐篷':'tent','旋转木马':'carousel','小城堡':'castle','摩天轮':'ferris','火箭':'rocket','蘑菇小屋':'mushroom','彩虹':'rainbow','热气球':'balloon','小帆船':'sailboat','流星':'shootingstar'};
+  const art=(name,emoji)=>window.StickerArt?.has(ARTKEY[name])?window.StickerArt.svg(ARTKEY[name],esc(name)):emoji;
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
   const valid=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -23,7 +26,7 @@
     let now=dayNum(today()),current=0;if(list.length&&now-list[list.length-1]<=1){current=1;for(let i=list.length-1;i>0&&list[i]-list[i-1]===1;i--)current++}
     return {total:list.length,best,current,todayDone:done(days[today()])};
   }
-  function stickerRow(goals,value){return `<div class="rt-badges">${goals.map(([n,icon,goal,name])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?icon:'🔒'}</span><small>${value>=n?name:goal}</small></div>`).join('')}</div><p class="hint">解锁的贴纸可以在小岛上摆放装饰。</p>`}
+  function stickerRow(goals,value){return `<div class="rt-badges">${goals.map(([n,icon,goal,name])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="${value>=n?'rt-art':''}">${value>=n?art(name,icon):'🔒'}</span><small>${value>=n?name:goal}</small></div>`).join('')}</div><p class="hint">解锁的贴纸可以在小岛上摆放装饰。</p>`}
   function quizSection(){
     let list=quizzes(),total=latest(),next=quizGoals.find(g=>total<g[0]),prevGoal=[...quizGoals].reverse().find(g=>total>=g[0]),now=dayNum(today()),base=[...list].reverse().find(x=>dayNum(x.date)<=now-7),gain=base?total-base.total:null;
     return `<section class="card rt-section"><h2>ReadTheory 累计测验 · 阅读里程碑</h2>
@@ -42,7 +45,7 @@
   function stickers(){let total=latest(),best=stats().best;return [...quizGoals.filter(g=>total>=g[0]).map(g=>({id:'rt-quiz-'+g[0],kind:'readtheory',name:g[3],emoji:g[1]})),...streakGoals.filter(g=>best>=g[0]).map(g=>({id:'rt-streak-'+g[0],kind:'readtheory',name:g[3],emoji:g[1]}))]}
   if(window.ReadingRewards){let RR=window.ReadingRewards,baseInventory=RR.inventory,baseSprite=RR.sprite,baseDisplay=RR.display;
     RR.inventory=()=>[...baseInventory(),...stickers()];
-    RR.sprite=item=>item?.kind==='readtheory'?`<span class="rt-sticker" role="img" aria-label="${esc(item.name)}"><span>${item.emoji}</span></span>`:baseSprite(item);
+    RR.sprite=item=>item?.kind==='readtheory'?(window.StickerArt?.has(ARTKEY[item.name])?`<span class="rt-sticker rt-sticker-art">${art(item.name,'')}</span>`:`<span class="rt-sticker" role="img" aria-label="${esc(item.name)}"><span>${item.emoji}</span></span>`):baseSprite(item);
     RR.display=item=>item?.kind==='readtheory'?RR.sprite(item):baseDisplay(item)}
   function week(){let days=store().days,now=dayNum(today());return `<div class="rt-week">${[6,5,4,3,2,1,0].map(n=>{let d=new Date((now-n)*864e5).toISOString().slice(0,10),x=days[d],c=count(x),w='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()],label=n?'周'+w:'今天';
       if(c>=DAILY)return `<div class="rt-day full"><small>${label}</small><span>⭐</span></div>`;
