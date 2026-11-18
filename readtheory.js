@@ -8,7 +8,7 @@
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
   const valid=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
-  function store(){let state=window.LearningApp.read();state.readtheory||={};state.readtheory.days||={};state.readtheory.quizzes||=[];return state.readtheory}
+  function store(){let state=window.LearningApp.read();state.readtheory||={};state.readtheory.days||={};state.readtheory.lexile||=[];state.readtheory.quizzes||=[];return state.readtheory}
   // 之前记录过的最大 Knowledge Points（不含 before 当天及之后）
   const kpBefore=before=>Math.max(0,...Object.entries(store().days).filter(([d,x])=>valid(d)&&d<before&&Number.isFinite(x?.kp)).map(([,x])=>x.kp));
   const lastKpBefore=before=>{let e=Object.entries(store().days).filter(([d,x])=>valid(d)&&d<before&&Number.isFinite(x?.kp)).sort((a,b)=>b[0].localeCompare(a[0]))[0];return e?{date:e[0],kp:e[1].kp}:null};
@@ -28,6 +28,24 @@
   const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
   function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?'🐧':'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
   function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2>🐧 小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
+  // 蓝思值登山：山脚 0L（BR），山顶 1200L；输入蓝思值后企鹅爬到对应位置
+  const LM=()=>window.LexileMountain,LEX_MAX=1200,LEX_STEP=200;
+  const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
+  function lexileSection(){
+    let list=lexList(),cur=list.at(-1)?.value,first=list[0]?.value,[px,py]=LM().point(cur||0),next=cur==null?LEX_STEP:Math.min(LEX_MAX,(Math.floor(cur/LEX_STEP)+1)*LEX_STEP),top=cur!=null&&cur>=LEX_MAX;
+    return `<section class="card rt-section rt-mountain"><h2>🏔️ 蓝思值登山</h2>
+      <div class="rt-mtn">${LM().svg(cur)}${cur!=null?`<div class="rt-climber ${top?'at-top':''}" style="left:${px/LM().W*100}%;top:${py/LM().H*100}%">${penguin(5,'登山的小企鹅')}<b class="rt-climber-label">${top?'🏆 ':''}${cur}L</b></div>`:''}</div>
+      <div class="rt-lex-summary">${cur==null?'<p class="hint">还没有记录蓝思值。在 ReadTheory 的个人进度里可以看到 Lexile，填进来，小企鹅就会开始爬山。</p>':`<strong>${cur}L</strong>${first!=null&&cur>first?`<em>比起点 +${cur-first}L</em>`:''}<p class="hint">${cur>=LEX_MAX?'已经登上山顶，太厉害了！':'再升 '+(next-cur)+'L 就到达 '+next+'L 小旗。'}</p>`}</div>
+      <form id="rt-lex-form" class="rt-kp-form"><label>更新蓝思值（Lexile）<input name="lexile" inputmode="numeric" placeholder="例如 650L" autocomplete="off"></label><button class="primary">更新</button></form>
+      <p id="rt-lex-message" class="hint" role="status">${list.length?'上次更新：'+esc(list.at(-1).date):''}</p>
+    </section>`}
+  function saveLexile(e){e.preventDefault();let raw=String(new FormData(e.target).get('lexile')||'').trim().toUpperCase().replace(/[\sL]/g,''),msg=document.querySelector('#rt-lex-message'),old=lexList().at(-1)?.value;
+    let n=raw==='BR'?0:Number(raw);if(!/^(BR|\d{1,4})$/.test(raw)||n>2000){msg.textContent='请输入蓝思值，例如 650L（只填数字也可以）。';return}
+    if(old!=null&&n<old&&!confirm('新的蓝思值比上次（'+old+'L）低，确定要更新吗？'))return;
+    let m=store(),d=today(),same=m.lexile.find(x=>x.date===d);if(same){same.value=n;same.at=Date.now()}else m.lexile.push({date:d,value:n,at:Date.now()});
+    window.LearningApp.commit();page();let flagsBefore=old==null?0:Math.floor(Math.min(old,LEX_MAX)/LEX_STEP),flagsNow=Math.floor(Math.min(n,LEX_MAX)/LEX_STEP),el=document.querySelector('#rt-lex-message');
+    el.textContent=old==null?'小企鹅出发啦！目前在 '+n+'L。':n>old?'小企鹅往上爬了 '+(n-old)+'L！'+(flagsNow>flagsBefore?(flagsNow*LEX_STEP>=LEX_MAX?' 🏔️ 登上山顶啦！':' 🚩 到达 '+flagsNow*LEX_STEP+'L 小旗！'):''):'已更新为 '+n+'L。';
+    document.querySelector('.rt-mountain')?.scrollIntoView({block:'nearest'})}
   function stickers(){return Array.from({length:penguinCount()},(_,i)=>({id:'rt-penguin-'+(i+1),kind:'readtheory',name:'小企鹅 No.'+(i+1),index:i}))}
   if(window.ReadingRewards){let RR=window.ReadingRewards,baseInventory=RR.inventory,baseSprite=RR.sprite,baseDisplay=RR.display;
     RR.inventory=()=>[...baseInventory(),...stickers()];
@@ -52,11 +70,13 @@
       <p id="rt-kp-message" class="hint" role="status">${(l=>l?'上次记录：'+l.kp.toLocaleString('en-US')+' 分（'+esc(l.date)+'）。今天输入的分数要比这个多，才算完成。'+(t.kp!=null?' 今天已记录 '+t.kp.toLocaleString('en-US')+' 分。':''):t.kp!=null?'今天记下了起点 '+t.kp.toLocaleString('en-US')+' 分，明天的分数要比它多。':'第一次记录：输入现在的分数作为起点，以后每天都要比上一次多。')(lastKpBefore(today()))}</p>
       ${s.todayDone?'':'<p class="hint">分数比上次多，就能点亮今天的星星 ⭐，再领 1 只新企鹅 🐧</p>'}
     </section>
+    ${lexileSection()}
     ${collection()}
     <div class="stats"><div><strong>${s.current}</strong><span>天连续完成</span></div><div><strong>${s.best}</strong><span>天最长连续</span></div><div><strong>${s.total}</strong><span>天累计完成</span></div></div>
     <section class="card rt-section"><h2>最近 7 天 · 能量电池</h2>${week()}</section>
     <section class="card rt-section"><h2>连续完成 · 里程碑</h2>${goalRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天达成「${n[1]}」，再送 ${BONUS} 只企鹅</p>`:'<p class="hint">连续里程碑全部达成！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>`;
     app.querySelectorAll('[data-rt-battery]').forEach(b=>b.onclick=()=>{let d=b.dataset.rtBattery;if(!valid(d)||d>=today())return;let m=store(),x=m.days[d]||={};if(x.battery)delete x.battery;else{if(count(x)>=DAILY||!batteriesLeft(d))return;x.battery=true}x.updatedAt=Date.now();window.LearningApp.commit();page()});
+    app.querySelector('#rt-lex-form').onsubmit=saveLexile;
     app.querySelector('#rt-kp-form').onsubmit=e=>{e.preventDefault();let raw=String(new FormData(e.target).get('kp')||'').replace(/[,，\s]/g,''),n=Number(raw),msg=document.querySelector('#rt-kp-message'),d=today(),prev=kpBefore(d);
       if(!/^\d+$/.test(raw)||n>10000000){msg.textContent='请输入 ReadTheory 上看到的 Knowledge Points（只填数字）。';return}
       let m=store(),x=m.days[d]||={},first=!Object.entries(m.days).some(([k,y])=>k<d&&Number.isFinite(y?.kp));
@@ -68,6 +88,7 @@
   function merge(incoming){let m=store();
     for(let [d,x] of Object.entries(incoming?.days||{})){if(!valid(d)||!x||typeof x!=='object')continue;let mine=m.days[d]||={};mine.done=Math.max(count(mine),count(x));if(Number.isFinite(x.kp))mine.kp=Math.max(Number.isFinite(mine.kp)?mine.kp:0,x.kp);if(x.battery)mine.battery=true;mine.updatedAt=Math.max(Number(mine.updatedAt)||0,Number(x.updatedAt)||0)}
     for(let x of incoming?.quizzes||[])if(x&&valid(x.date)&&Number.isFinite(x.total)&&!m.quizzes.some(y=>y.date===x.date&&y.total===x.total))m.quizzes.push({date:x.date,total:x.total,at:Number(x.at)||0});
+    for(let x of incoming?.lexile||[])if(x&&valid(x.date)&&Number.isFinite(x.value)&&!m.lexile.some(y=>y.date===x.date&&y.value===x.value))m.lexile.push({date:x.date,value:x.value,at:Number(x.at)||0});
     refreshDot()}
   const btn=document.createElement('button');btn.id='rt-nav';btn.textContent='ReadTheory';
   document.querySelector('#reading-nav').after(btn);btn.onclick=page;
