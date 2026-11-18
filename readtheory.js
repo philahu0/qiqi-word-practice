@@ -65,6 +65,19 @@
     for(let n=1;n<=6;n++){let d=new Date((now-n)*864e5).toISOString().slice(0,10);if(d>first&&!done(days[d])&&batteriesLeft(d))out.push(d)}return out.reverse()}
   function batteryReminder(){let list=missedDays();if(!list.length)return '';let wd=d=>'周'+'日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()]+'（'+(+d.slice(5,7))+'/'+(+d.slice(8,10))+'）';
     return `<section class="card rt-section rt-battery-alert"><h2>🔋 有 ${list.length} 天忘记打卡了</h2><p>用能量电池补上，连续天数就不会断。每周有 ${BATTERIES} 个电池。</p><div class="rt-battery-list">${list.map(d=>`<button class="primary" data-rt-battery="${d}">用电池补上 ${wd(d)}</button>`).join('')}</div></section>`}
+  // 领到新企鹅的弹窗
+  function celebrate(from,got,newBonus){
+    document.querySelector('.rt-celebrate')?.remove();
+    let names=newBonus.map(k=>streakGoals.find(g=>'streak-'+g[0]===k)?.[1]).filter(Boolean);
+    let box=document.createElement('div');box.className='rt-celebrate';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label','获得新企鹅');
+    box.innerHTML=`<div class="rt-celebrate-card"><div class="rt-confetti" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="left:${(i*37)%100}%;animation-delay:${(i%6)*.12}s;background:${['#ffd23f','#ff7ab0','#4fd1c5','#7ad36f','#ff9f43','#8fb8ff'][i%6]}"></i>`).join('')}</div>
+      <h2>🎉 获得 ${got} 只新企鹅！</h2>
+      <div class="rt-celebrate-penguins">${Array.from({length:got},(_,i)=>`<div style="animation-delay:${.15+i*.18}s">${penguin(from+i)}<small>No.${from+i+1}</small></div>`).join('')}</div>
+      <p>${names.length?'今天读完 1 只，加上「'+names.join('、')+'」连续奖励 '+names.length*BONUS+' 只。':'今天的 Knowledge Points 涨了，真棒！'}</p>
+      <div class="rt-celebrate-actions"><button class="primary" data-celebrate="island">去小岛摆上</button><button data-celebrate="ok">好的</button></div></div>`;
+    let close=()=>{box.remove();document.removeEventListener('keydown',esc_)},esc_=e=>{if(e.key==='Escape')close()};
+    box.onclick=e=>{let b=e.target.closest('[data-celebrate]');if(e.target===box||b?.dataset.celebrate==='ok')close();if(b?.dataset.celebrate==='island'){close();document.querySelector('#mastered-nav')?.click()}};
+    document.addEventListener('keydown',esc_);document.body.append(box);box.querySelector('[data-celebrate="ok"]').focus()}
   function setNav(){document.querySelectorAll('header nav button').forEach(b=>b.classList.toggle('active',b.id==='rt-nav'))}
   function refreshDot(){let ok=stats().todayDone;btn.classList.toggle('rt-due',!ok);btn.title=ok?'今天的 ReadTheory 已完成':'今天还没完成 ReadTheory 阅读测验'}
   function page(){
@@ -89,7 +102,7 @@
       if(!/^\d+$/.test(raw)||n>10000000){msg.textContent='请输入 ReadTheory 上看到的 Knowledge Points（只填数字）。';return}
       let m=store(),x=m.days[d]||={},first=!Object.entries(m.days).some(([k,y])=>k<d&&Number.isFinite(y?.kp));
       if(!first&&n<=prev){msg.textContent='这个数字没有比上次（'+prev.toLocaleString('en-US')+' 分）多。先去 ReadTheory 完成一篇测验，再回来输入新的分数吧。';return}
-      let had=penguinCount();x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();grantBonus();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');
+      let had=penguinCount(),bonusBefore=[...bonusKeys()];x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();grantBonus();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');if(got>0)celebrate(had,got,bonusKeys().filter(k=>!bonusBefore.includes(k)));
       document.querySelector('#rt-kp-message').textContent=(first?'已记下起点 '+n.toLocaleString('en-US')+' 分。':'比上次多了 '+(n-prev).toLocaleString('en-US')+' 分，真棒！')+(got>0?' 获得 '+got+' 只新企鹅！':'');if(got>0)h.textContent+=' 获得 '+got+' 只新企鹅！'};
     refreshDot();
   }
