@@ -1,7 +1,8 @@
 (function(){
   // ReadTheory 每日阅读：去 ReadTheory 完成测验 → 回来输入最新的 Knowledge Points，比上次多才算今天完成。
   // 每周（周一到周日）有 2 个能量电池，可以补上最近 7 天里漏掉的一天，连续天数不断。
-  // 奖励是 99 只小企鹅贴纸：每完成一天领 1 只；连续天数里程碑各再送 2 只。企鹅可以摆到小岛上。
+  // 奖励是 99 只小企鹅贴纸：只有输入了更高的 Knowledge Points 的那天才领 1 只；能量电池只保住连续天数，不给企鹅。
+  // 连续天数里程碑各再送 2 只，在输入新分数时发放（记在 bonus 里，已发的不会收回）。企鹅可以摆到小岛上。
   const RT_URL='https://readtheory.org/auth/login',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
   const PENGUINS=99,BONUS=2;
   const streakGoals=[[3,'连续3天'],[7,'连续一周'],[14,'连续两周'],[30,'连续一个月'],[60,'连续两个月']];
@@ -24,10 +25,13 @@
     return {total:list.length,best,current,todayDone:done(days[today()])};
   }
   const reached=(goals,v)=>goals.filter(g=>v>=g[0]).length;
-  function penguinCount(){let s=stats();return Math.min(PENGUINS,s.total+BONUS*reached(streakGoals,s.best))}
+  const kpDays=()=>Object.entries(store().days).filter(([d,x])=>valid(d)&&count(x)>=DAILY).length;
+  function bonusKeys(){let m=store();if(!Array.isArray(m.bonus)){m.bonus=streakGoals.filter(g=>stats().best>=g[0]).map(g=>'streak-'+g[0])}return m.bonus}
+  function grantBonus(){let keys=bonusKeys(),best=stats().best;for(let g of streakGoals)if(best>=g[0]&&!keys.includes('streak-'+g[0]))keys.push('streak-'+g[0])}
+  function penguinCount(){return Math.min(PENGUINS,kpDays()+BONUS*bonusKeys().length)}
   const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
-  function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="rt-badge-icon">${value>=n?penguin(1,'小企鹅'):'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
-  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2><span class="rt-inline-penguin">${penguin(1,'')}</span>小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
+  function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span class="rt-badge-icon">${value>=n?penguin(1,'小企鹅'):'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，下一次输入新分数时多送 ${BONUS} 只小企鹅。</p>`}
+  function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2><span class="rt-inline-penguin">${penguin(1,'')}</span>小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每天输入更高的 Knowledge Points 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
   // 蓝思值登山：山脚 0L（BR），山顶 1200L；输入蓝思值后企鹅爬到对应位置
   const LM=()=>window.LexileMountain,LEX_MAX=1200,LEX_STEP=200;
   const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
@@ -85,11 +89,12 @@
       if(!/^\d+$/.test(raw)||n>10000000){msg.textContent='请输入 ReadTheory 上看到的 Knowledge Points（只填数字）。';return}
       let m=store(),x=m.days[d]||={},first=!Object.entries(m.days).some(([k,y])=>k<d&&Number.isFinite(y?.kp));
       if(!first&&n<=prev){msg.textContent='这个数字没有比上次（'+prev.toLocaleString('en-US')+' 分）多。先去 ReadTheory 完成一篇测验，再回来输入新的分数吧。';return}
-      let had=penguinCount();x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');
+      let had=penguinCount();x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();grantBonus();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');
       document.querySelector('#rt-kp-message').textContent=(first?'已记下起点 '+n.toLocaleString('en-US')+' 分。':'比上次多了 '+(n-prev).toLocaleString('en-US')+' 分，真棒！')+(got>0?' 获得 '+got+' 只新企鹅！':'');if(got>0)h.textContent+=' 获得 '+got+' 只新企鹅！'};
     refreshDot();
   }
   function merge(incoming){let m=store();
+    if(Array.isArray(incoming?.bonus)){let keys=bonusKeys();for(let k of incoming.bonus)if(typeof k==='string'&&/^streak-\d+$/.test(k)&&!keys.includes(k))keys.push(k)}
     for(let [d,x] of Object.entries(incoming?.days||{})){if(!valid(d)||!x||typeof x!=='object')continue;let mine=m.days[d]||={};mine.done=Math.max(count(mine),count(x));if(Number.isFinite(x.kp))mine.kp=Math.max(Number.isFinite(mine.kp)?mine.kp:0,x.kp);if(x.battery)mine.battery=true;mine.updatedAt=Math.max(Number(mine.updatedAt)||0,Number(x.updatedAt)||0)}
     for(let x of incoming?.quizzes||[])if(x&&valid(x.date)&&Number.isFinite(x.total)&&!m.quizzes.some(y=>y.date===x.date&&y.total===x.total))m.quizzes.push({date:x.date,total:x.total,at:Number(x.at)||0});
     for(let x of incoming?.lexile||[])if(x&&valid(x.date)&&Number.isFinite(x.value)&&!m.lexile.some(y=>y.date===x.date&&y.value===x.value))m.lexile.push({date:x.date,value:x.value,at:Number(x.at)||0});
