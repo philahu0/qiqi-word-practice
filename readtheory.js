@@ -29,27 +29,12 @@
   function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?'🐧':'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
   function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2>🐧 小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
   // 蓝思值登山：山脚 0L（BR），山顶 1400L；输入蓝思值后企鹅爬到对应位置
-  const LEX_MAX=1400,LEX_STEP=200,TRAIL=[[60,282],[175,258],[105,224],[205,196],[140,164],[228,138],[178,106],[236,78],[250,44]];
+  const LM=()=>window.LexileMountain,LEX_MAX=1400,LEX_STEP=200;
   const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
-  function trailPoint(v){let segs=[],total=0;for(let i=1;i<TRAIL.length;i++){let [x0,y0]=TRAIL[i-1],[x1,y1]=TRAIL[i],l=Math.hypot(x1-x0,y1-y0);segs.push([x0,y0,x1,y1,l]);total+=l}
-    let d=Math.max(0,Math.min(1,v/LEX_MAX))*total;for(let [x0,y0,x1,y1,l] of segs){if(d<=l){let t=l?d/l:0;return [x0+(x1-x0)*t,y0+(y1-y0)*t]}d-=l}return TRAIL.at(-1)}
   function lexileSection(){
-    let list=lexList(),cur=list.at(-1)?.value,first=list[0]?.value,[px,py]=trailPoint(cur||0),next=cur==null?LEX_STEP:Math.min(LEX_MAX,(Math.floor(cur/LEX_STEP)+1)*LEX_STEP);
-    let flags=[];for(let v=LEX_STEP;v<=LEX_MAX;v+=LEX_STEP){let [x,y]=trailPoint(v),got=cur!=null&&cur>=v;flags.push(`<g><path d="M${x} ${y}V${y-16}" stroke="#3b2a1e" stroke-width="2"/><path d="M${x} ${y-16}l13 4-13 4z" fill="${got?'#ff6b6b':'#fff'}" stroke="#3b2a1e" stroke-width="1.6" stroke-linejoin="round"/><text x="${x+(x>200?-6:6)}" y="${y+12}" text-anchor="${x>200?'end':'start'}" font-size="11" font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="3" fill="${got?'#c2410c':'#5b6b7a'}">${v}L</text></g>`)}
+    let list=lexList(),cur=list.at(-1)?.value,first=list[0]?.value,[px,py]=LM().point(cur||0),next=cur==null?LEX_STEP:Math.min(LEX_MAX,(Math.floor(cur/LEX_STEP)+1)*LEX_STEP),top=cur!=null&&cur>=LEX_MAX;
     return `<section class="card rt-section rt-mountain"><h2>🏔️ 蓝思值登山</h2>
-      <div class="rt-mtn"><svg viewBox="0 -34 400 334" role="img" aria-label="蓝思值登山图，目前 ${cur==null?'未记录':cur+'L'}">
-        <defs><linearGradient id="rt-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe3ff"/><stop offset="1" stop-color="#eef8ff"/></linearGradient><linearGradient id="rt-rock" x1="0" x2="1"><stop offset="0" stop-color="#9bb7a0"/><stop offset=".5" stop-color="#7fa386"/><stop offset=".51" stop-color="#6b8f73"/><stop offset="1" stop-color="#5f8267"/></linearGradient></defs>
-        <rect y="-34" width="400" height="334" fill="url(#rt-sky)"/><circle cx="340" cy="52" r="22" fill="#ffe27a"/>
-        <path d="M0 300L70 170L130 230L190 150L240 210L300 120L400 260V300z" fill="#c9dbe8"/>
-        <path d="M10 300L250 30L392 300z" fill="url(#rt-rock)" stroke="#3b2a1e" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M250 30L214 71L228 63L240 77L253 62L268 74z" fill="#fff" stroke="#3b2a1e" stroke-width="2.4" stroke-linejoin="round"/>
-        <path d="M0 300Q100 270 200 286T400 280V300z" fill="#84c95b" stroke="#3b2a1e" stroke-width="2.4"/>
-        <polyline points="${TRAIL.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#fff6dd" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline points="${TRAIL.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#b98a52" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
-        ${flags.join('')}
-        <text x="${TRAIL[0][0]-6}" y="296" text-anchor="end" font-size="11" font-weight="700" fill="#2f5a2a">BR</text>
-        <path d="M250 30V12" stroke="#3b2a1e" stroke-width="2.4"/><path d="M250 12l18 5-18 5z" fill="#ffd23f" stroke="#3b2a1e" stroke-width="2" stroke-linejoin="round"/>
-      </svg>${cur!=null?`<div class="rt-climber" style="left:${px/4}%;top:${(py+34)/3.34}%">${penguin(5,'登山的小企鹅')}<b class="rt-climber-label">${cur}L</b></div>`:''}</div>
+      <div class="rt-mtn">${LM().svg(cur)}${cur!=null?`<div class="rt-climber ${top?'at-top':''}" style="left:${px/LM().W*100}%;top:${py/LM().H*100}%">${penguin(5,'登山的小企鹅')}<b class="rt-climber-label">${top?'🏆 ':''}${cur}L</b></div>`:''}</div>
       <div class="rt-lex-summary">${cur==null?'<p class="hint">还没有记录蓝思值。在 ReadTheory 的个人进度里可以看到 Lexile，填进来，小企鹅就会开始爬山。</p>':`<strong>${cur}L</strong>${first!=null&&cur>first?`<em>比起点 +${cur-first}L</em>`:''}<p class="hint">${cur>=LEX_MAX?'已经登上山顶，太厉害了！':'再升 '+(next-cur)+'L 就到达 '+next+'L 小旗。'}</p>`}</div>
       <form id="rt-lex-form" class="rt-kp-form"><label>更新蓝思值（Lexile）<input name="lexile" inputmode="numeric" placeholder="例如 650L" autocomplete="off"></label><button class="primary">更新</button></form>
       <p id="rt-lex-message" class="hint" role="status">${list.length?'上次更新：'+esc(list.at(-1).date):''}</p>
