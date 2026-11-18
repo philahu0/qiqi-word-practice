@@ -28,8 +28,8 @@
   const penguin=(i,label)=>`<span class="rt-penguin" role="img" aria-label="${esc(label||'小企鹅 No.'+(i+1))}" style="background-position:${(i%10)/9*100}% ${Math.floor(i/10)/9*100}%"></span>`;
   function goalRow(goals,value){return `<div class="rt-badges">${goals.map(([n,label])=>`<div class="rt-badge ${value>=n?'earned':''}"><span>${value>=n?'🐧':'🔒'}</span><small>${label}${value>=n?' · +'+BONUS:''}</small></div>`).join('')}</div><p class="hint">每达成一个里程碑，多送 ${BONUS} 只小企鹅。</p>`}
   function collection(){let n=penguinCount();return `<section class="card rt-section rt-collection"><h2>🐧 小企鹅收藏 · ${n} / ${PENGUINS}</h2><p class="hint">每完成一天 ReadTheory 领 1 只新企鹅，可以去小岛「布置装饰」里摆上。</p><div class="rt-penguins">${Array.from({length:n},(_,i)=>`<div class="rt-penguin-cell">${penguin(i)}<small>No.${i+1}</small></div>`).join('')}${n<PENGUINS?`<div class="rt-penguin-cell locked">${penguin(n,'下一只企鹅')}<small>下一只</small></div>`:''}</div></section>`}
-  // 蓝思值登山：山脚 0L（BR），山顶 1400L；输入蓝思值后企鹅爬到对应位置
-  const LM=()=>window.LexileMountain,LEX_MAX=1400,LEX_STEP=200;
+  // 蓝思值登山：山脚 0L（BR），山顶 1200L；输入蓝思值后企鹅爬到对应位置
+  const LM=()=>window.LexileMountain,LEX_MAX=1200,LEX_STEP=200;
   const lexList=()=>store().lexile.filter(x=>x&&valid(x.date)&&Number.isFinite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
   function lexileSection(){
     let list=lexList(),cur=list.at(-1)?.value,first=list[0]?.value,[px,py]=LM().point(cur||0),next=cur==null?LEX_STEP:Math.min(LEX_MAX,(Math.floor(cur/LEX_STEP)+1)*LEX_STEP),top=cur!=null&&cur>=LEX_MAX;
@@ -44,7 +44,7 @@
     if(old!=null&&n<old&&!confirm('新的蓝思值比上次（'+old+'L）低，确定要更新吗？'))return;
     let m=store(),d=today(),same=m.lexile.find(x=>x.date===d);if(same){same.value=n;same.at=Date.now()}else m.lexile.push({date:d,value:n,at:Date.now()});
     window.LearningApp.commit();page();let flagsBefore=old==null?0:Math.floor(Math.min(old,LEX_MAX)/LEX_STEP),flagsNow=Math.floor(Math.min(n,LEX_MAX)/LEX_STEP),el=document.querySelector('#rt-lex-message');
-    el.textContent=old==null?'小企鹅出发啦！目前在 '+n+'L。':n>old?'小企鹅往上爬了 '+(n-old)+'L！'+(flagsNow>flagsBefore?' 🚩 到达 '+flagsNow*LEX_STEP+'L 小旗！':''):'已更新为 '+n+'L。';
+    el.textContent=old==null?'小企鹅出发啦！目前在 '+n+'L。':n>old?'小企鹅往上爬了 '+(n-old)+'L！'+(flagsNow>flagsBefore?(flagsNow*LEX_STEP>=LEX_MAX?' 🏔️ 登上山顶啦！':' 🚩 到达 '+flagsNow*LEX_STEP+'L 小旗！'):''):'已更新为 '+n+'L。';
     document.querySelector('.rt-mountain')?.scrollIntoView({block:'nearest'})}
   function stickers(){return Array.from({length:penguinCount()},(_,i)=>({id:'rt-penguin-'+(i+1),kind:'readtheory',name:'小企鹅 No.'+(i+1),index:i}))}
   if(window.ReadingRewards){let RR=window.ReadingRewards,baseInventory=RR.inventory,baseSprite=RR.sprite,baseDisplay=RR.display;

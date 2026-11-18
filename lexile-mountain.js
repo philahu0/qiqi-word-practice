@@ -1,7 +1,7 @@
 (function(){
   // 蓝思值登山插画：圆润绿色山体、雪顶、云朵、树、石头、小木桥和蜿蜒的沙土小路。
   // 坐标系 400×560；LexileMountain.point(v) 返回蓝思值 v 在小路上的位置。
-  const W=400,H=560,MAX=1400,STEP=200,O='#3b2a1e';
+  const W=400,H=560,MAX=1200,STEP=200,O='#3b2a1e';
   const TRAIL=[[70,548],[250,488],[96,430],[262,362],[126,306],[244,256],[160,214],[246,168],[196,134],[238,104],[252,80]];
   const DENSE=(()=>{let out=[TRAIL[0]],start=TRAIL[0];for(let i=1;i<TRAIL.length-1;i++){let c=TRAIL[i],n=TRAIL[i+1],end=[(c[0]+n[0])/2,(c[1]+n[1])/2];for(let k=1;k<=24;k++){let t=k/24,u=1-t;out.push([u*u*start[0]+2*u*t*c[0]+t*t*end[0],u*u*start[1]+2*u*t*c[1]+t*t*end[1]])}start=end}out.push(TRAIL.at(-1));return out})();
   const SEGS=[];let TOTAL=0;for(let i=1;i<DENSE.length;i++){let [x0,y0]=DENSE[i-1],[x1,y1]=DENSE[i],l=Math.hypot(x1-x0,y1-y0);SEGS.push([x0,y0,x1,y1,l]);TOTAL+=l}
