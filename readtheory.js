@@ -1,5 +1,5 @@
 (function(){
-  // ReadTheory 每日阅读：去 ReadTheory 完成 1 篇阅读测验 → 回来点一下完成。
+  // ReadTheory 每日阅读：去 ReadTheory 完成测验 → 回来输入最新的 Knowledge Points，比上次多才算今天完成。
   // 每周（周一到周日）有 2 个能量电池，可以补上最近 7 天里漏掉的一天，连续天数不断。
   // 奖励是 100 只小企鹅贴纸：每完成一天领 1 只；连续天数里程碑各再送 2 只。企鹅可以摆到小岛上。
   const RT_URL='https://readtheory.org/auth/login',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
@@ -9,6 +9,9 @@
   const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Hong_Kong'});
   const valid=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
   function store(){let state=window.LearningApp.read();state.readtheory||={};state.readtheory.days||={};state.readtheory.quizzes||=[];return state.readtheory}
+  // 之前记录过的最大 Knowledge Points（不含 before 当天及之后）
+  const kpBefore=before=>Math.max(0,...Object.entries(store().days).filter(([d,x])=>valid(d)&&d<before&&Number.isFinite(x?.kp)).map(([,x])=>x.kp));
+  const lastKpBefore=before=>{let e=Object.entries(store().days).filter(([d,x])=>valid(d)&&d<before&&Number.isFinite(x?.kp)).sort((a,b)=>b[0].localeCompare(a[0]))[0];return e?{date:e[0],kp:e[1].kp}:null};
   const count=x=>Math.min(DAILY,Math.max(0,Math.floor(Number(x?.done)||0)));
   const done=x=>count(x)>=DAILY||!!x?.battery;
   const weekOf=d=>{let n=dayNum(d);return n-((new Date(n*864e5).getUTCDay()+6)%7)};
@@ -40,24 +43,30 @@
   function refreshDot(){let ok=stats().todayDone;btn.classList.toggle('rt-due',!ok);btn.title=ok?'今天的 ReadTheory 已完成':'今天还没完成 ReadTheory 阅读测验'}
   function page(){
     window.LearningApp.leave();setNav();
-    let s=stats(),c=count(store().days[today()]);
+    let s=stats(),t=store().days[today()]||{};
     app.innerHTML=`<div class="eyebrow">READTHEORY · 每日阅读</div><h1>ReadTheory 阅读</h1>
     <section class="card rt-today ${s.todayDone?'complete':''}">
-      <h2>${s.todayDone?'🎉 今天的阅读任务完成啦！':'📖 今天的阅读任务：完成 '+DAILY+' 篇 ReadTheory 测验'}</h2>
-      <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，用自己的账号登录；读完文章做完题，回来点一下</span></div>
-      <ol class="rt-steps">${Array.from({length:DAILY},(_,i)=>`<li class="${c>i?'checked':''}"><div><strong>${DAILY>1?'第 '+(i+1)+' 篇':'今天的 1 篇'}</strong></div><button class="rt-check" data-rt-quiz="${i+1}" aria-pressed="${c>i}">${c>i?'✓ 做完了':'做完了，点这里'}</button></li>`).join('')}</ol>
-      ${s.todayDone?'':'<p class="hint">做完就能点亮今天的星星 ⭐，再领 1 只新企鹅 🐧</p>'}
+      <h2>${s.todayDone?'🎉 今天的阅读任务完成啦！':'📖 今天的阅读任务：完成 ReadTheory 测验，让 Knowledge Points 涨起来'}</h2>
+      <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，用自己的账号登录；做完测验后看一下 Knowledge Points，回来填上</span></div>
+      <form id="rt-kp-form" class="rt-kp-form"><label>做完测验后，输入 ReadTheory 上现在的 Knowledge Points<input name="kp" inputmode="numeric" pattern="[0-9,]*" placeholder="例如 1250" autocomplete="off" value="${t.kp??''}"></label><button class="primary">${s.todayDone&&t.kp!=null?'更新':'提交'}</button></form>
+      <p id="rt-kp-message" class="hint" role="status">${(l=>l?'上次记录：'+l.kp.toLocaleString('en-US')+' 分（'+esc(l.date)+'）。今天输入的分数要比这个多，才算完成。'+(t.kp!=null?' 今天已记录 '+t.kp.toLocaleString('en-US')+' 分。':''):t.kp!=null?'今天记下了起点 '+t.kp.toLocaleString('en-US')+' 分，明天的分数要比它多。':'第一次记录：输入现在的分数作为起点，以后每天都要比上一次多。')(lastKpBefore(today()))}</p>
+      ${s.todayDone?'':'<p class="hint">分数比上次多，就能点亮今天的星星 ⭐，再领 1 只新企鹅 🐧</p>'}
     </section>
     ${collection()}
     <div class="stats"><div><strong>${s.current}</strong><span>天连续完成</span></div><div><strong>${s.best}</strong><span>天最长连续</span></div><div><strong>${s.total}</strong><span>天累计完成</span></div></div>
     <section class="card rt-section"><h2>最近 7 天 · 能量电池</h2>${week()}</section>
     <section class="card rt-section"><h2>连续完成 · 里程碑</h2>${goalRow(streakGoals,s.best)}${(n=>n?`<div class="progress"><i style="width:${Math.min(100,s.best/n[0]*100)}%"></i></div><p class="hint">再连续 ${n[0]-s.best} 天达成「${n[1]}」，再送 ${BONUS} 只企鹅</p>`:'<p class="hint">连续里程碑全部达成！</p>')(streakGoals.find(g=>s.best<g[0]))}</section>`;
     app.querySelectorAll('[data-rt-battery]').forEach(b=>b.onclick=()=>{let d=b.dataset.rtBattery;if(!valid(d)||d>=today())return;let m=store(),x=m.days[d]||={};if(x.battery)delete x.battery;else{if(count(x)>=DAILY||!batteriesLeft(d))return;x.battery=true}x.updatedAt=Date.now();window.LearningApp.commit();page()});
-    app.querySelectorAll('[data-rt-quiz]').forEach(b=>b.onclick=()=>{let m=store(),x=m.days[today()]||={},had=penguinCount(),i=Number(b.dataset.rtQuiz);x.done=count(x)>=i?i-1:i;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=penguinCount()-had;if(got>0){let h=app.querySelector('.rt-today h2');h.textContent+=' 获得 '+got+' 只新企鹅 🐧'}});
+    app.querySelector('#rt-kp-form').onsubmit=e=>{e.preventDefault();let raw=String(new FormData(e.target).get('kp')||'').replace(/[,，\s]/g,''),n=Number(raw),msg=document.querySelector('#rt-kp-message'),d=today(),prev=kpBefore(d);
+      if(!/^\d+$/.test(raw)||n>10000000){msg.textContent='请输入 ReadTheory 上看到的 Knowledge Points（只填数字）。';return}
+      let m=store(),x=m.days[d]||={},first=!Object.entries(m.days).some(([k,y])=>k<d&&Number.isFinite(y?.kp));
+      if(!first&&n<=prev){msg.textContent='这个数字没有比上次（'+prev.toLocaleString('en-US')+' 分）多。先去 ReadTheory 完成一篇测验，再回来输入新的分数吧。';return}
+      let had=penguinCount();x.kp=n;x.done=DAILY;delete x.battery;x.updatedAt=Date.now();window.LearningApp.commit();page();let got=penguinCount()-had,h=app.querySelector('.rt-today h2');
+      document.querySelector('#rt-kp-message').textContent=(first?'已记下起点 '+n.toLocaleString('en-US')+' 分。':'比上次多了 '+(n-prev).toLocaleString('en-US')+' 分，真棒！')+(got>0?' 获得 '+got+' 只新企鹅 🐧':'');if(got>0)h.textContent+=' 获得 '+got+' 只新企鹅 🐧'};
     refreshDot();
   }
   function merge(incoming){let m=store();
-    for(let [d,x] of Object.entries(incoming?.days||{})){if(!valid(d)||!x||typeof x!=='object')continue;let mine=m.days[d]||={};mine.done=Math.max(count(mine),count(x));if(x.battery)mine.battery=true;mine.updatedAt=Math.max(Number(mine.updatedAt)||0,Number(x.updatedAt)||0)}
+    for(let [d,x] of Object.entries(incoming?.days||{})){if(!valid(d)||!x||typeof x!=='object')continue;let mine=m.days[d]||={};mine.done=Math.max(count(mine),count(x));if(Number.isFinite(x.kp))mine.kp=Math.max(Number.isFinite(mine.kp)?mine.kp:0,x.kp);if(x.battery)mine.battery=true;mine.updatedAt=Math.max(Number(mine.updatedAt)||0,Number(x.updatedAt)||0)}
     for(let x of incoming?.quizzes||[])if(x&&valid(x.date)&&Number.isFinite(x.total)&&!m.quizzes.some(y=>y.date===x.date&&y.total===x.total))m.quizzes.push({date:x.date,total:x.total,at:Number(x.at)||0});
     refreshDot()}
   const btn=document.createElement('button');btn.id='rt-nav';btn.textContent='ReadTheory';
