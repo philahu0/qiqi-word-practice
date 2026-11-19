@@ -3,7 +3,7 @@
   // 每周（周一到周日）有 2 个能量电池，可以补上最近 7 天里漏掉的一天，连续天数不断。
   // 奖励是 99 只小企鹅贴纸：只有输入了更高的 Knowledge Points 的那天才领 1 只；能量电池只保住连续天数，不给企鹅。
   // 连续天数里程碑各再送 2 只，在输入新分数时发放（记在 bonus 里，已发的不会收回）。企鹅可以摆到小岛上。
-  const RT_URL='https://readtheory.org/auth/login',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
+  const RT_URL='https://readtheory.org/app/student/dashboard',DAILY=1,BATTERIES=2,app=document.querySelector('#app'),esc=window.LearningApp.escape;
   const PENGUINS=99,BONUS=2;
   const streakGoals=[[3,'连续3天'],[7,'连续一周'],[14,'连续两周'],[30,'连续一个月'],[60,'连续两个月']];
   const dayNum=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5;
@@ -89,7 +89,7 @@
     app.innerHTML=`<div class="eyebrow">READTHEORY · 每日阅读</div><h1>ReadTheory 阅读</h1>
     <section class="card rt-today ${s.todayDone?'complete':''}">
       <h2>${s.todayDone?'🎉 今天的阅读任务完成啦！':'📖 今天的阅读任务：完成 ReadTheory 测验，让 Knowledge Points 涨起来'}</h2>
-      <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，用自己的账号登录；做完测验后看一下 Knowledge Points，回来填上</span></div>
+      <div class="rt-go"><a class="button primary" href="${RT_URL}" target="_blank" rel="noopener">打开 ReadTheory ↗</a><span class="hint">在新窗口打开，登录过一次后会直接进入学生主页；做完测验后看一下 Knowledge Points，回来填上</span></div>
       <form id="rt-kp-form" class="rt-kp-form"><label>做完测验后，输入 ReadTheory 上现在的 Knowledge Points<input name="kp" inputmode="numeric" pattern="[0-9,]*" placeholder="例如 1250" autocomplete="off" value="${t.kp??''}"></label><button class="primary">${s.todayDone&&t.kp!=null?'更新':'提交'}</button></form>
       <p id="rt-kp-message" class="hint" role="status">${(l=>l?'上次记录：'+l.kp.toLocaleString('en-US')+' 分（'+esc(l.date)+'）'+(t.kp!=null?' · 今天：'+t.kp.toLocaleString('en-US')+' 分':''):'')(lastKpBefore(today()))}</p>
     </section>
